@@ -1,0 +1,59 @@
+name: Test Build Script
+
+on:
+  schedule:
+    - cron: "0 0 * * 0" 
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  test-local-build-and-e2e:
+    runs-on: ubuntu-latest
+    name: Test deploy.sh in standard environment
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install AWS SAM CLI
+        run: pip install aws-sam-cli
+
+      - name: Test deploy.sh script
+        run: ./deploy.sh
+
+      - name: Test local uvicorn/FastAPI server
+        run: |
+          mv .aws-sam/build/BedrockAccessGatewayLayer/python/* ./app
+          (cd app && ./run.sh &)
+          timeout 30 bash -c 'while ! nc -z localhost 8000; do sleep 1; done'
+          curl localhost:8000/health | jq
+          curl localhost:8000/api/v1/models -H 'Authorization: Bearer bedrock' | jq
+
+  test-cloudshell-build:
+    runs-on: ubuntu-latest
+    name: Test deploy.sh in CloudShell environment
+    container:
+      image: public.ecr.aws/amazonlinux/amazonlinux:2023
+      env:
+        AWS_EXECUTION_ENV: CloudShell
+
+    steps:
+      - name: Install dependencies
+        run: |
+          yum install -y sudo python3-pip tar git
+          pip3 install aws-sam-cli
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Test deploy.sh script
+        run: ./deploy.sh

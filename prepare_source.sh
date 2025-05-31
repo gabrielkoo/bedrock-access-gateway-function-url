@@ -63,6 +63,9 @@ fi
 
 cp -r $REPO_DIR/src/api app/api
 
+# To surpress warnings
+echo "" > app/requirements.txt
+
 # Remove "Manum" from requirements.txt, as LWA is used instead.
 grep -v "mangum" $REPO_DIR/src/requirements.txt > layer/requirements.txt
 grep -v "Mangum" $REPO_DIR/src/api/app.py > app/api/app.py
