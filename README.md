@@ -39,12 +39,6 @@ If you are using AWS CloudShell VPC environment, make sure it has access to the 
 # Dependency installation
 sudo yum update -y
 sudo yum install -y python3.12 python3.12-pip
-(
-    cd /tmp && \
-    curl -L https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip -o aws-sam-cli-linux-x86_64.zip && \
-    unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation && \
-    sudo ./sam-installation/install
-)
 
 git clone --depth=1 https://github.com/gabrielkoo/bedrock-access-gateway-function-url
 cd bedrock-access-gateway-function-url
