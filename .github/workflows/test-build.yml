@@ -1,4 +1,4 @@
-name: Test Deploy Script
+name: Test Build Script
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - '*'
 
 jobs:
-  test-deploy-standard:
+  test-local-build-and-e2e:
     runs-on: ubuntu-latest
     name: Test deploy.sh in standard environment
 
@@ -28,7 +28,14 @@ jobs:
       - name: Test deploy.sh script
         run: ./deploy.sh
 
-  test-deploy-cloudshell:
+      - name: Test local uvicorn/FastAPI server
+        run: |
+          mv .aws-sam/build/BedrockAccessGatewayLayer/python ./api
+          (cd app && ./run.sh &)
+          curl localhost:8000/health | jq
+          curl localhost:8000/api/v1/models -H 'Authorization: Bearer bedrock' | jq
+
+  test-cloudshell-build:
     runs-on: ubuntu-latest
     name: Test deploy.sh in CloudShell environment
     container:
@@ -37,13 +44,13 @@ jobs:
         AWS_EXECUTION_ENV: CloudShell
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Install dependencies
         run: |
-          yum install -y sudo python3-pip
+          yum install -y sudo python3-pip tar
           pip3 install aws-sam-cli
+
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Test deploy.sh script
         run: ./deploy.sh
