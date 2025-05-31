@@ -118,4 +118,4 @@ Outputs:
     Value: !GetAtt BedrockAccessGatewayFunction.Arn
   SampleCurlCommand:
     Description: "Sample curl command to list available models"
-    Value: !Sub "curl -X GET ${BedrockAccessGatewayFunctionUrl.FunctionUrl}/api/v1/models -H 'Authorization: Bearer ${ApiKey}'"
+    Value: !Sub "curl -X GET ${BedrockAccessGatewayFunctionUrl.FunctionUrl}api/v1/models -H 'Authorization: Bearer ${ApiKey}'"
