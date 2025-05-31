@@ -145,8 +145,8 @@ const renderChat = () => {
       chat._activeService.rawBody.model = modelId;
       const url = `${endpoint}/chat/completions`;
       chat._activeService.url = url;
-      chat._activeService.keyVerificationDetails.url = url;
-      chat._activeService.keyVerificationDetails.method = 'POST';
+      chat._activeService._keyVerificationDetails.url = url;
+      chat._activeService._keyVerificationDetails.method = 'GET';
       chat._activeService.connectSettings.headers.Authorization = `Bearer ${apiKey}`;
       chat._activeService.connectSettings.headers;
     }
