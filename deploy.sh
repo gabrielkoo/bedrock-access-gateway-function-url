@@ -1,7 +1,7 @@
 #!/bin/bash
 
-PYTHON_VERSION=3.12
-SAM_CLI_TELEMETRY=0
+export PYTHON_VERSION=3.12
+export  SAM_CLI_TELEMETRY=0
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
