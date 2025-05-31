@@ -9,17 +9,9 @@ on:
       - '*'
 
 jobs:
-  test-deploy-script:
+  test-deploy-standard:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        environment:
-          - name: with-cloudshell
-            aws_execution_env: CloudShell
-          - name: without-cloudshell
-            aws_execution_env: ''
-
-    name: Test deploy.sh in ${{ matrix.environment.name }} environment
+    name: Test deploy.sh in standard environment
 
     steps:
       - name: Checkout code
@@ -33,11 +25,20 @@ jobs:
       - name: Install AWS SAM CLI
         run: pip install aws-sam-cli
 
-      - name: Make sh scripts executable
-        run: chmod +x deploy.sh prepare_source.sh
+      - name: Test deploy.sh script
+        run: ./deploy.sh
+
+  test-deploy-cloudshell:
+    runs-on: ubuntu-latest
+    name: Test deploy.sh in CloudShell environment
+    container:
+      image: public.ecr.aws/sam/build-provided.al2023:latest-x86_64
+      env:
+        AWS_EXECUTION_ENV: CloudShell
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Test deploy.sh script
-        env:
-          AWS_EXECUTION_ENV: ${{ matrix.environment.aws_execution_env }}
-          CI: true
         run: ./deploy.sh
