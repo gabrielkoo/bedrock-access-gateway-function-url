@@ -27,4 +27,9 @@ fi
 ./prepare_source.sh $NO_EMBEDDINGS
 
 sam build $USE_CONTAINER
+
+if [[ ! -z "$CI" ]]; then
+  exit
+fi
+
 sam deploy --guided
