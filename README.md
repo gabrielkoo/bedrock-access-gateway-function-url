@@ -1,5 +1,57 @@
 # bedrock-access-gateway-function-url
 
+# Why not XXX?
+
+<table>
+  <thead>
+    <tr>
+      <th>Solution</th>
+      <th>Pros &amp; Cons</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>LiteLLM</strong> (Python SDK)</td>
+      <td>
+        (-) <a href="https://github.com/BerriAI/litellm/blob/d77b825814c354935ac540c8f8b4b696f23d83c9/pyproject.toml#L21-L61">full list of unnecessary dependencies</a> potentially bloating your Python environment/application, e.g., <code>gunicorn</code>, <code>fastapi</code>, <code>google-cloud-kms</code>, etc.<br>
+        (-) Python Only
+      </td>
+    </tr>
+    <tr>
+      <td><strong>LiteLLM</strong> (Proxy)</td>
+      <td>
+        (-) Huge Infra Cost (Worker + Database + Redis)<br>
+        (-) <a href="https://docs.litellm.ai/docs/proxy/deploy#platform-specific-guide">Good luck with maintaining <code>docker-compose</code> / K8S</a>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>bedrock-access-gateway</strong></td>
+      <td>
+        (-) &gt;US$16/month<br>
+        (-) Extra Load Balancer needed + Fargate/Lambda pricing
+      </td>
+    </tr>
+    <tr>
+      <td><strong>aisuite</strong></td>
+      <td>
+        (+) No bloatware issue with usage of <code>extra</code> Python dependencies<br>
+        (+) No extra infra cost<br>
+        (-) Python Only
+      </td>
+    </tr>
+    <tr>
+      <td><strong>This Solution</strong></td>
+      <td>
+        (+) Only minimal pay-as-you-go Lambda exec costs<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+Minimal
+
+## Intro
+
 This repo is combining the great works of the original implementations of [bedrock-access-gateway](https://github.com/aws-samples/bedrock-access-gateway/) with [aws-lambda-web-adapter](https://github.com/awslabs/aws-lambda-web-adapter) so that one can deploy an OpenAI API compatible endpoint on AWS Lambda with Function URL and streaming enabled.
 
 This solution is more cost effective than the original `bedrock-access-gateway` solution as it removes the need of fixed cost components (Application Load Balancer and the optional Fargate container, >US$16/month) and the need of a VPC. So that one can use it in a fully pay-as-you-go model.
@@ -50,7 +102,7 @@ sam deploy --guided
 
 ## Test
 
-Enter your credentials on my static hosted UI <https://gabrielkoo.github.io/bedrock-access-gateway-function-url/>, 
+Enter your credentials on my static hosted UI <https://chat.gab.hk/>, 
 ![Test UI](./docs/test-ui.png)
 
 or just run the code below in your shell:
