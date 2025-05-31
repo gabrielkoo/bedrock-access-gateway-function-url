@@ -30,7 +30,7 @@ jobs:
 
       - name: Test local uvicorn/FastAPI server
         run: |
-          mv .aws-sam/build/BedrockAccessGatewayLayer/python ./app
+          mv .aws-sam/build/BedrockAccessGatewayLayer/python/* ./app
           (cd app && ls -la && ./run.sh &)
           curl localhost:8000/health | jq
           curl localhost:8000/api/v1/models -H 'Authorization: Bearer bedrock' | jq
