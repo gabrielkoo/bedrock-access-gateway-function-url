@@ -3,13 +3,55 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   Bedrock Access Gateway (OpenAI API Schema) with FastAPI on AWS Lambda,
   exposed as a public API with AWS Lambda Function URL.
+  Pay-as-you-go, no fixed infrastructure costs.
 
 Parameters:
+  LambdaAdapterLayerVersion:
+    Type: Number
+    Description: "Version of the Lambda Adapter Layer to use"
+    Default: 25
+    MinValue: 1
+    ConstraintDescription: "Must be a positive integer"
+  PythonRuntime:
+    Type: String
+    Description: "Python runtime version to use"
+    Default: python3.12
+    AllowedPattern: "^python3\\.([1-9][0-9]*)$"
+    ConstraintDescription: "Must be a valid Python 3.x runtime (e.g., python3.12)"
   ApiKey:
     Type: String
-    Description: "API Key to be used in the Authorization header"
+    Description: "Pick a value of the API Key you want to be used in the Authorization header"
     MinLength: 1
     # NoEcho: true
+  DefaultModel:
+    Type: String
+    Description: "Default Bedrock model to use for inference"
+    Default: amazon.nova-premier-v1:0
+    AllowedPattern: "([a-z]+\\.)?[a-z0-9-]+\\.[a-z0-9-]+(:\\d+)?"
+    ConstraintDescription: "Must be a valid Bedrock model ID, cross regioninference profiles are also supported (e.g., us.amazon.nova-premier-v1:0)"
+  DEBUG:
+    Type: String
+    Description: "Enable debug mode"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Infrastructure Configuration"
+        Parameters:
+          - LambdaAdapterLayerVersion
+          - PythonRuntime
+          - Architecture
+      - Label:
+          default: "Application Configuration"
+        Parameters:
+          - ApiKey
+          - DefaultModel
+          - DEBUG
 
 Globals:
   Function:
@@ -22,18 +64,18 @@ Resources:
     Properties:
       ContentUri: layer/
       CompatibleRuntimes:
-        - python3.12
+        - !Ref PythonRuntime
       CompatibleArchitectures:
         - x86_64
     Metadata:
-      BuildMethod: python3.12
+      BuildMethod: !Ref PythonRuntime
 
   BedrockAccessGatewayFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
       Handler: run.sh
-      Runtime: python3.12
+      Runtime: !Ref PythonRuntime
       Architectures:
         - x86_64
       Environment:
@@ -43,12 +85,12 @@ Resources:
           AWS_LWA_INVOKE_MODE: RESPONSE_STREAM
           # Align with `app/api/app.py` in the `uvicorn.run` line
           AWS_LWA_PORT: 8000
-          # DEBUG: 'true'
-          DEFAULT_MODEL: 'amazon.nova-micro-v1:0'
+          DEBUG: !Ref DEBUG
+          DEFAULT_MODEL: !Ref DefaultModel
           ENABLE_CROSS_REGION_INFERENCE: 'true'
       Layers:
         - !Ref BedrockAccessGatewayLayer
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:23
+        - !Sub "arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerX86:${LambdaAdapterLayerVersion}"
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: RESPONSE_STREAM
@@ -74,3 +116,6 @@ Outputs:
   Function:
     Description: "FastAPI Lambda Function ARN"
     Value: !GetAtt BedrockAccessGatewayFunction.Arn
+  SampleCurlCommand:
+    Description: "Sample curl command to list available models"
+    Value: !Sub "curl -X GET ${BedrockAccessGatewayFunctionUrl.FunctionUrl}/api/v1/models -H 'Authorization: Bearer ${ApiKey}'"

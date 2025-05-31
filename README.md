@@ -69,45 +69,54 @@ Read more on the creation of this project [here](https://dev.to/aws-builders/use
 
 ## Deployment
 
+Dependency: an AWS Account with Bedrock model access enabled in the region you want to deploy this solution.
+
 Under both deployment options, `--no-embeddings` is optional. If you want to speed up the inference as well as reduce the Lambda Layer, you can exclude the embeddings from the deployment package.
 
-### Local Build
+However for simplicify, CloudShell deployment method is recommended as it is faster and you do not need to worry about installing the dependencies on your local machine.
 
-Make sure you have `sam` and Docker installed.
-
-```shell
-# Fetchs and builds the latest `bedrock-access-gateway` Python source code
-./prepare_source.sh  # [--no-embeddings]
-
-sam build --use-container
-sam deploy --guided
-```
-
-### AWS CloudShell
-
-If you are using AWS CloudShell VPC environment, make sure it has access to the internet.
+- Local: Make sure you have docker as well as AWS SAM CLI installed and configured with your AWS credentials.
+- AWS CloudShell: If you are using a VPC environment, make sure it has access to the internet.
 
 ```shell
-# Dependency installation
-sudo yum update -y
-sudo yum install -y python3.12 python3.12-pip
-
 git clone --depth=1 https://github.com/gabrielkoo/bedrock-access-gateway-function-url
 cd bedrock-access-gateway-function-url
 
-./prepare_source.sh  # [--no-embeddings]
-sam build
-sam deploy --guided
+./deploy.sh # [--no-embeddings]
 ```
 
 ## Test
 
-Enter your credentials on my static hosted UI <https://chat.gab.hk/>, 
+Enter your credentials on my static hosted UI <https://chat.gab.hk/>,
 ![Test UI](./docs/test-ui.png)
 
 or just run the code below in your shell:
 
 ```shell
+# 1. List the models available in your Bedrock account
+curl "${FUNCTION_URL}api/v1/models" \
+     -H "Authorization: Bearer $API_KEY"
+
+# > {
+# >     "object": "list",
+# >     "data": [
+# >         {
+# >             "id": "amazon.titan-tg1-large",
+# >             "created": 1748694923,
+# >             "object": "model",
+# >             "owned_by": "bedrock"
+# >         },
+# >         {
+# >             "id": "us.amazon.nova-premier-v1:0",
+# >             "created": 1748694923,
+# >             "object": "model",
+# >             "owned_by": "bedrock"
+# >         },
+# >         ...
+# >     ]
+# > }
+
+# 2. Make a chat completion request
 curl "${FUNCTION_URL}api/v1/chat/completions" \
      -H "Authorization: Bearer $API_KEY" \
      -X POST \
@@ -127,4 +136,3 @@ curl "${FUNCTION_URL}api/v1/chat/completions" \
 # > data: {"id":"chatcmpl-61c29444","created":1735753748,"model":"amazon.nova-micro-v1:0","system_fingerprint":"fp","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":""}}],"object":"chat.completion.chunk","usage":null}
 # > data: {"id":"chatcmpl-61c29444","created":1735753748,"model":"amazon.nova-micro-v1:0","system_fingerprint":"fp","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" 2"}}],"object":"chat.completion.chunk","usage":null}
 ```
-

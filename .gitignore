@@ -177,3 +177,5 @@ samconfig.toml
 
 app/api
 app/requirements.txt
+
+.aws-sam
