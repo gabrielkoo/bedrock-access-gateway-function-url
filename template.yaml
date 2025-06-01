@@ -29,7 +29,7 @@ Parameters:
     Default: amazon.nova-premier-v1:0
     AllowedPattern: "([a-z]+\\.)?[a-z0-9-]+\\.[a-z0-9-]+(:\\d+)?"
     ConstraintDescription: "Must be a valid Bedrock model ID, cross regioninference profiles are also supported (e.g., us.amazon.nova-premier-v1:0)"
-  DEBUG:
+  Debug:
     Type: String
     Description: "Enable debug mode"
     Default: "false"
@@ -45,13 +45,12 @@ Metadata:
         Parameters:
           - LambdaAdapterLayerVersion
           - PythonRuntime
-          - Architecture
       - Label:
           default: "Application Configuration"
         Parameters:
           - ApiKey
           - DefaultModel
-          - DEBUG
+          - Debug
 
 Globals:
   Function:
@@ -85,7 +84,7 @@ Resources:
           AWS_LWA_INVOKE_MODE: RESPONSE_STREAM
           # Align with `app/api/app.py` in the `uvicorn.run` line
           AWS_LWA_PORT: 8000
-          DEBUG: !Ref DEBUG
+          DEBUG: !Ref Debug
           DEFAULT_MODEL: !Ref DefaultModel
           ENABLE_CROSS_REGION_INFERENCE: 'true'
       Layers:

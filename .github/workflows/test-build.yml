@@ -25,7 +25,12 @@ jobs:
           python-version: '3.12'
 
       - name: Install AWS SAM CLI
-        run: pip install aws-sam-cli
+        run: |
+          cd /tmp
+          wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+          unzip aws-sam-cli-linux-x86_64.zip -d aws-sam-cli-linux-x86_64
+          sudo ./aws-sam-cli-linux-x86_64/install
+          sam --version
 
       - name: Test deploy.sh script
         run: ./deploy.sh
@@ -35,8 +40,8 @@ jobs:
           mv .aws-sam/build/BedrockAccessGatewayLayer/python/* ./app
           (cd app && ./run.sh &)
           timeout 30 bash -c 'while ! nc -z localhost 8000; do sleep 1; done'
-          curl localhost:8000/health | jq
-          curl localhost:8000/api/v1/models -H 'Authorization: Bearer bedrock' | jq
+          curl localhost:8000/health -s | jq
+          curl localhost:8000/api/v1/models -s -H 'Authorization: Bearer bedrock' | jq
 
   test-cloudshell-build:
     runs-on: ubuntu-latest
@@ -48,12 +53,18 @@ jobs:
 
     steps:
       - name: Install dependencies
-        run: |
-          yum install -y sudo python3-pip tar git
-          pip3 install aws-sam-cli
+        run: yum install -y sudo python3-pip tar git wget unzip jq
 
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Install AWS SAM CLI
+        run: |
+          cd /tmp
+          wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+          unzip aws-sam-cli-linux-x86_64.zip -d aws-sam-cli-linux-x86_64
+          sudo ./aws-sam-cli-linux-x86_64/install
+          sam --version
 
       - name: Test deploy.sh script
         run: ./deploy.sh
