@@ -48,7 +48,6 @@
   </tbody>
 </table>
 
-Minimal
 
 ## Intro
 
