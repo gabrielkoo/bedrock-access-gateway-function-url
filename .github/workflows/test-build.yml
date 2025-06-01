@@ -26,11 +26,13 @@ jobs:
 
       - name: Install AWS SAM CLI
         run: |
-          cd /tmp
-          wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
-          unzip aws-sam-cli-linux-x86_64.zip -d aws-sam-cli-linux-x86_64
-          sudo ./aws-sam-cli-linux-x86_64/install
-          sam --version
+          if [ ! $(command -v sam) ]; then
+            cd /tmp
+            wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+            unzip aws-sam-cli-linux-x86_64.zip -d aws-sam-cli-linux-x86_64 -q
+            sudo ./aws-sam-cli-linux-x86_64/install
+            sam --version
+          fi
 
       - name: Test deploy.sh script
         run: ./deploy.sh
@@ -62,7 +64,7 @@ jobs:
         run: |
           cd /tmp
           wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
-          unzip aws-sam-cli-linux-x86_64.zip -d aws-sam-cli-linux-x86_64
+          unzip aws-sam-cli-linux-x86_64.zip -d aws-sam-cli-linux-x86_64 -q
           sudo ./aws-sam-cli-linux-x86_64/install
           sam --version
 
