@@ -1,6 +1,6 @@
 # bedrock-access-gateway-function-url
 
-**UPDATE (2025-08-05)**: AWS silently launched an [official OpenAI compatible API endpoint](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions.html) - but so far it only supports the `gpt-oss` reasoning models and doesn't support tool calls. So this solution still rocks until AWS gradually adds more support.
+**UPDATE (2025-08-05)**: AWS silently launched an [official OpenAI compatible API endpoint](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions.html) - but so far it only supports the `gpt-oss` reasoning models and doesn't support tool calls (refer to my [new article](https://dev.to/aws-builders/aws-launches-openai-compatible-api-for-bedrock-and-i-did-some-tests-49cd)). So this solution still rocks until AWS gradually adds more support.
 
 # Why not XXX?
 
