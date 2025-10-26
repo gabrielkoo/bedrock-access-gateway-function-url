@@ -38,29 +38,28 @@ rm -rf app/api
 rm -f layer/requirements.txt
 
 if [ -d "$REPO_DIR" ]; then
-    echo "Repository already cloned, fetching latest changes"
-    (cd $REPO_DIR && git fetch)
+    echo "Repository already cloned, resetting to clean state"
+    (cd $REPO_DIR && git reset --hard HEAD && git clean -fd)
 else
     echo "Cloning aws-samples/bedrock-access-gateway repository"
     git clone --depth 1 https://github.com/aws-samples/bedrock-access-gateway $REPO_DIR
 fi
-
-cp -r $REPO_DIR/src/api app/api
-cp $REPO_DIR/src/requirements.txt layer/requirements.txt
-
-echo "" > app/requirements.txt
 
 # Apply patches
 echo "Applying patches"
 (cd $REPO_DIR/src && patch -p1 < ../../../patches/auth.py.patch)
 (cd $REPO_DIR/src && patch -p1 < ../../../patches/app.py.patch)
 (cd $REPO_DIR/src && patch -p1 < ../../../patches/requirements.txt.patch)
-(cd $REPO_DIR/src && patch -p1 < ../../../patches/pydantic-version.patch)
 
 if [ "$NO_EMBEDDINGS" = true ]; then
     echo "Applying no-embeddings patch"
     (cd $REPO_DIR/src && patch -p1 < ../../../patches/no-embeddings.patch)
 fi
+
+cp -r $REPO_DIR/src/api app/api
+cp $REPO_DIR/src/requirements.txt layer/requirements.txt
+
+echo "" > app/requirements.txt
 
 # Update boto3/botocore to latest versions
 for pkg in boto3 botocore; do

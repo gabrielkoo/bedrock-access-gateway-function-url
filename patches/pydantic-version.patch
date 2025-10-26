@@ -1,9 +1,9 @@
 --- a/requirements.txt
 +++ b/requirements.txt
 @@ -1,5 +1,5 @@
- mangum==0.19.0
- fastapi==0.115.6
--pydantic==2.10.4
-+pydantic>=2.10.4
- pydantic-settings==2.6.1
- uvicorn==0.34.0
+ fastapi==0.115.8
+-pydantic==2.7.1
++pydantic>=2.12.3
+ uvicorn==0.29.0
+ mangum==0.17.0
+ tiktoken==0.6.0
