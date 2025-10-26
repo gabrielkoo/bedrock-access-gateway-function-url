@@ -1,0 +1,10 @@
+--- a/api/app.py
++++ b/api/app.py
+@@ -6,7 +6,6 @@ from fastapi.responses import StreamingResponse
+ from fastapi.middleware.cors import CORSMiddleware
+ from fastapi.openapi.docs import get_swagger_ui_html
+ from fastapi.staticfiles import StaticFiles
+-from mangum import Mangum
+ 
+ from api.routers import chat, embeddings, model
+ from api.setting import (

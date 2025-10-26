@@ -65,8 +65,11 @@ Read more on the creation of this project [here](https://dev.to/aws-builders/use
 
 - Removes Application Load Balancer -> Lambda Function URL
 - Docker Lambda Runtime -> Python Lambda Runtime
+- Uses patch files for clean, maintainable modifications to upstream code
+- Graceful API key fallback (works in local testing without AWS services)
 - Optionally removes `numpy` and `tiktoken` dependencies when embedding models are not needed
 - Deployment option with CloudShell -> Fast and efficient!
+- Optional Secrets Manager template for enhanced security
 
 ## Deployment
 
@@ -370,3 +373,17 @@ curl "${FUNCTION_URL}api/v1/chat/completions" \
 # > data: {"id":"chatcmpl-61c29444","created":1735753748,"model":"amazon.nova-micro-v1:0","system_fingerprint":"fp","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":""}}],"object":"chat.completion.chunk","usage":null}
 # > data: {"id":"chatcmpl-61c29444","created":1735753748,"model":"amazon.nova-micro-v1:0","system_fingerprint":"fp","choices":[{"index":0,"finish_reason":null,"logprobs":null,"delta":{"content":" 2"}}],"object":"chat.completion.chunk","usage":null}
 ```
+
+## Alternative: Secrets Manager Deployment
+
+For enhanced security, you can use the Secrets Manager template which stores the API key in AWS Secrets Manager instead of as an environment variable:
+
+```shell
+# Build with Secrets Manager template
+sam build -t template-with-secrets-manager.yaml
+
+# Deploy
+sam deploy --guided
+```
+
+**Cost consideration**: This adds ~$0.40/month for Secrets Manager storage, but provides better security and allows API key rotation without redeploying the Lambda function.
