@@ -38,6 +38,8 @@ jobs:
         run: ./deploy.sh
 
       - name: Test local uvicorn/FastAPI server
+        env:
+          API_KEY: bedrock
         run: |
           mv .aws-sam/build/BedrockAccessGatewayLayer/python/* ./app
           (cd app && ./run.sh &)

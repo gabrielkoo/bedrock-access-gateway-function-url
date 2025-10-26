@@ -1,0 +1,113 @@
+--- a/api/models/bedrock.py
++++ b/api/models/bedrock.py
+@@ -1,6 +1,4 @@
+ import json
+-import numpy as np
+-import tiktoken
+ from typing import Any
+ 
+ import boto3
+@@ -17,8 +15,6 @@ from api.schema import (
+ 
+ from api.setting import AWS_REGION, ENABLE_CROSS_REGION_INFERENCE
+ 
+-ENCODER = tiktoken.get_encoding("cl100k_base")
+-
+ bedrock_runtime = boto3.client(service_name="bedrock-runtime", region_name=AWS_REGION)
+ bedrock = boto3.client(service_name="bedrock", region_name=AWS_REGION)
+ 
+@@ -500,70 +496,3 @@ class BedrockChatModel(ChatModel):
+                 )
+ 
+         return response
+-
+-
+-class BedrockEmbeddingsModel(EmbeddingsModel):
+-    def __init__(self, model_id: str):
+-        super().__init__(model_id)
+-
+-    def _get_bedrock_embeddings(self, texts: list[str]) -> list[list[float]]:
+-        embeddings = []
+-        for text in texts:
+-            body = json.dumps({"inputText": text})
+-            response = bedrock_runtime.invoke_model(
+-                body=body,
+-                modelId=self.model_id,
+-                accept="application/json",
+-                contentType="application/json",
+-            )
+-            response_body = json.loads(response.get("body").read())
+-            embeddings.append(response_body.get("embedding"))
+-        return embeddings
+-
+-    def _get_titan_multimodal_embeddings(self, texts: list[str]) -> list[list[float]]:
+-        embeddings = []
+-        for text in texts:
+-            body = json.dumps({"inputText": text, "embeddingConfig": {"outputEmbeddingLength": 1024}})
+-            response = bedrock_runtime.invoke_model(
+-                body=body,
+-                modelId=self.model_id,
+-                accept="application/json",
+-                contentType="application/json",
+-            )
+-            response_body = json.loads(response.get("body").read())
+-            embeddings.append(response_body.get("embedding"))
+-        return embeddings
+-
+-    def embeddings(self, request: EmbeddingsRequest) -> EmbeddingsResponse:
+-        if "amazon.titan-embed-image" in self.model_id:
+-            embeddings = self._get_titan_multimodal_embeddings(request.input)
+-        else:
+-            embeddings = self._get_bedrock_embeddings(request.input)
+-
+-        data = []
+-        total_tokens = 0
+-        for i, embedding in enumerate(embeddings):
+-            tokens = len(ENCODER.encode(request.input[i]))
+-            total_tokens += tokens
+-            data.append(
+-                EmbeddingsData(
+-                    object="embedding",
+-                    embedding=embedding,
+-                    index=i,
+-                )
+-            )
+-
+-        response = EmbeddingsResponse(
+-            object="list",
+-            data=data,
+-            model=self.model_id,
+-            usage=EmbeddingsUsage(
+-                prompt_tokens=total_tokens,
+-                total_tokens=total_tokens,
+-            ),
+-        )
+-
+-        return response
+--- a/api/app.py
++++ b/api/app.py
+@@ -8,7 +8,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
+ from fastapi.staticfiles import StaticFiles
+ from mangum import Mangum
+ 
+-from api.routers import chat, embeddings, model
++from api.routers import chat, model
+ from api.setting import (
+     API_ROUTE_PREFIX,
+     DEBUG,
+@@ -48,7 +48,6 @@ async def health():
+ 
+ 
+ app.include_router(chat.router, prefix=API_ROUTE_PREFIX)
+-app.include_router(embeddings.router, prefix=API_ROUTE_PREFIX)
+ app.include_router(model.router, prefix=API_ROUTE_PREFIX)
+ 
+ 
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -6,5 +6,3 @@ uvicorn==0.34.0
+ boto3==1.35.80
+ botocore==1.35.80
+ jmespath==1.0.1
+-tiktoken==0.8.0
+-numpy==2.2.1
