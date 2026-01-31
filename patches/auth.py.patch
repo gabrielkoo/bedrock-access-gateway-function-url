@@ -47,5 +47,5 @@
 +
 +if not api_key:
 +    api_key = DEFAULT_API_KEYS
- 
++
  security = HTTPBearer()
