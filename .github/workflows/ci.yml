@@ -69,6 +69,87 @@ jobs:
             --parameter-overrides "Architecture=arm64" \
             -t template.yaml
 
+  e2e:
+    name: E2E API Tests
+    needs: [build]
+    # Skip scheduled runs and fork PRs (no OIDC access)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      API_KEY: test-ci-key
+      DEFAULT_MODEL: us.amazon.nova-lite-v1:0
+      ENABLE_CROSS_REGION_INFERENCE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.E2E_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Prepare source
+        run: ./prepare_source.sh
+
+      - name: Install dependencies
+        run: pip install -r layer/requirements.txt
+
+      - name: Start server
+        run: |
+          cd app && python3 api/app.py &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/api/v1/models -H "Authorization: Bearer $API_KEY" > /dev/null 2>&1; then
+              echo "Server ready"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Test - List models
+        run: |
+          RESP=$(curl -sf http://localhost:8000/api/v1/models -H "Authorization: Bearer $API_KEY")
+          echo "$RESP" | jq .
+          COUNT=$(echo "$RESP" | jq '.data | length')
+          [ "$COUNT" -gt 0 ] || (echo "FAIL: no models returned" && exit 1)
+
+      - name: Test - Chat completion
+        run: |
+          RESP=$(curl -sf http://localhost:8000/api/v1/chat/completions \
+            -H "Authorization: Bearer $API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"model":"us.amazon.nova-lite-v1:0","messages":[{"role":"user","content":"Say hi in 3 words"}],"max_tokens":10}')
+          echo "$RESP" | jq .
+          echo "$RESP" | jq -e '.choices[0].message.content' || (echo "FAIL: no chat response" && exit 1)
+
+      - name: Test - Chat completion (streaming)
+        run: |
+          curl -sf http://localhost:8000/api/v1/chat/completions \
+            -H "Authorization: Bearer $API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"model":"us.amazon.nova-lite-v1:0","messages":[{"role":"user","content":"Say hi"}],"max_tokens":10,"stream":true}' \
+            | grep -q 'data:' || (echo "FAIL: no streaming data" && exit 1)
+
+      - name: Test - Embeddings
+        run: |
+          RESP=$(curl -sf http://localhost:8000/api/v1/embeddings \
+            -H "Authorization: Bearer $API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"model":"amazon.titan-embed-text-v2:0","input":"hello world"}')
+          echo "$RESP" | jq .
+          echo "$RESP" | jq -e '.data[0].embedding | length > 0' || (echo "FAIL: no embeddings" && exit 1)
+
+      - name: Test - Invalid auth rejected
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/v1/models \
+            -H "Authorization: Bearer wrong-key")
+          [ "$HTTP_CODE" = "403" ] || [ "$HTTP_CODE" = "401" ] || (echo "FAIL: expected 401/403, got $HTTP_CODE" && exit 1)
+
   notify-upstream-drift:
     name: Check upstream drift
     if: github.event_name == 'schedule'
