@@ -24,7 +24,6 @@ jobs:
       - name: Apply required patches
         run: |
           cd build/bedrock-access-gateway/src
-          # Only apply required patches (skip optional ones like no-embeddings.patch)
           for patch in app.py.patch auth.py.patch requirements.txt.patch; do
             echo "Applying $patch..."
             patch -p1 < "../../../patches/$patch"
@@ -45,12 +44,18 @@ jobs:
         run: sam validate -t template-with-secrets-manager.yaml --lint
 
   build:
-    name: SAM Build (${{ matrix.arch }})
+    name: SAM Build (${{ matrix.platform }})
     needs: [validate-patches, validate-templates]
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [x86_64, arm64]
+        include:
+          - runs-on: ubuntu-latest
+            platform: linux/amd64
+            arch: x86_64
+          - runs-on: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch: arm64
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/setup-sam@v2
