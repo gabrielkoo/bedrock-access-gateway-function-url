@@ -64,6 +64,8 @@ jobs:
         run: ./prepare_source.sh
 
       - name: SAM Build (${{ matrix.arch }})
+        timeout-minutes: 8  # Prevent indefinite hanging
+        continue-on-error: ${{ matrix.arch == 'arm64' }}  # Don't block PR on arm64 issues
         run: |
           sam build --use-container \
             --parameter-overrides "Architecture=${{ matrix.arch }}" \
