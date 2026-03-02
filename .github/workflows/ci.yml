@@ -21,14 +21,15 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/aws-samples/bedrock-access-gateway.git build/bedrock-access-gateway
 
-      - name: Apply patches
+      - name: Apply required patches
         run: |
           cd build/bedrock-access-gateway/src
-          for patch in ../../../patches/*.patch; do
-            echo "Applying $(basename $patch)..."
-            patch -p1 < "$patch"
+          # Only apply required patches (skip optional ones like no-embeddings.patch)
+          for patch in app.py.patch auth.py.patch requirements.txt.patch; do
+            echo "Applying $patch..."
+            patch -p1 < "../../../patches/$patch"
           done
-          echo "All patches applied successfully"
+          echo "All required patches applied successfully"
 
   validate-templates:
     name: Validate SAM templates
@@ -75,7 +76,6 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/aws-samples/bedrock-access-gateway.git /tmp/upstream
 
-          # Check if patched files have changed since our patches were last updated
           UPSTREAM_AUTH_HASH=$(sha256sum /tmp/upstream/src/api/auth.py | cut -d' ' -f1)
           UPSTREAM_REQ_HASH=$(sha256sum /tmp/upstream/src/requirements.txt | cut -d' ' -f1)
           UPSTREAM_APP_HASH=$(sha256sum /tmp/upstream/src/api/app.py | cut -d' ' -f1)
@@ -84,17 +84,12 @@ jobs:
           echo "req_hash=$UPSTREAM_REQ_HASH" >> $GITHUB_OUTPUT
           echo "app_hash=$UPSTREAM_APP_HASH" >> $GITHUB_OUTPUT
 
-          # Store hashes for comparison
-          echo "$UPSTREAM_AUTH_HASH" > /tmp/current_hashes.txt
-          echo "$UPSTREAM_REQ_HASH" >> /tmp/current_hashes.txt
-          echo "$UPSTREAM_APP_HASH" >> /tmp/current_hashes.txt
-
-          # Try applying patches
+          # Try applying required patches
           cd /tmp/upstream/src
           PATCH_FAILED=0
-          for patch in $GITHUB_WORKSPACE/patches/*.patch; do
-            if ! patch -p1 --dry-run < "$patch" > /dev/null 2>&1; then
-              echo "::warning::Patch $(basename $patch) may not apply cleanly to latest upstream"
+          for patch in app.py.patch auth.py.patch requirements.txt.patch; do
+            if ! patch -p1 --dry-run < "$GITHUB_WORKSPACE/patches/$patch" > /dev/null 2>&1; then
+              echo "::warning::Patch $patch may not apply cleanly to latest upstream"
               PATCH_FAILED=1
             fi
           done
