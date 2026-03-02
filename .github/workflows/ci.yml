@@ -102,14 +102,25 @@ jobs:
 
       - name: Start server
         run: |
-          cd app && python3 api/app.py &
+          cd app && PYTHONPATH=. python3 api/app.py > /tmp/server.log 2>&1 &
+          SERVER_PID=$!
           for i in $(seq 1 30); do
+            if ! kill -0 $SERVER_PID 2>/dev/null; then
+              echo "FAIL: server crashed on startup:"
+              cat /tmp/server.log
+              exit 1
+            fi
             if curl -sf http://localhost:8000/api/v1/models -H "Authorization: Bearer $API_KEY" > /dev/null 2>&1; then
               echo "Server ready"
               break
             fi
             sleep 1
           done
+          if ! curl -sf http://localhost:8000/api/v1/models -H "Authorization: Bearer $API_KEY" > /dev/null 2>&1; then
+            echo "FAIL: server not ready after 30s:"
+            cat /tmp/server.log
+            exit 1
+          fi
 
       - name: Test - List models
         run: |
