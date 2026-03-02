@@ -1,0 +1,127 @@
+name: CI - Build & Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly check: upstream patches still apply + templates valid
+    - cron: '0 9 * * 1'  # Every Monday 9:00 UTC
+  workflow_dispatch:
+
+jobs:
+  validate-patches:
+    name: Validate patches against upstream
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone upstream bedrock-access-gateway
+        run: |
+          git clone --depth 1 https://github.com/aws-samples/bedrock-access-gateway.git build/bedrock-access-gateway
+
+      - name: Apply patches
+        run: |
+          cd build/bedrock-access-gateway/src
+          for patch in ../../../patches/*.patch; do
+            echo "Applying $(basename $patch)..."
+            patch -p1 < "$patch"
+          done
+          echo "All patches applied successfully"
+
+  validate-templates:
+    name: Validate SAM templates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Validate template.yaml
+        run: sam validate -t template.yaml --lint
+
+      - name: Validate template-with-secrets-manager.yaml
+        run: sam validate -t template-with-secrets-manager.yaml --lint
+
+  build:
+    name: SAM Build (${{ matrix.arch }})
+    needs: [validate-patches, validate-templates]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Prepare source
+        run: ./prepare_source.sh
+
+      - name: SAM Build (${{ matrix.arch }})
+        run: |
+          sam build --use-container \
+            --parameter-overrides "Architecture=${{ matrix.arch }}" \
+            -t template.yaml
+
+  notify-upstream-drift:
+    name: Check upstream drift
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone upstream and check for changes
+        id: drift
+        run: |
+          git clone --depth 1 https://github.com/aws-samples/bedrock-access-gateway.git /tmp/upstream
+
+          # Check if patched files have changed since our patches were last updated
+          UPSTREAM_AUTH_HASH=$(sha256sum /tmp/upstream/src/api/auth.py | cut -d' ' -f1)
+          UPSTREAM_REQ_HASH=$(sha256sum /tmp/upstream/src/requirements.txt | cut -d' ' -f1)
+          UPSTREAM_APP_HASH=$(sha256sum /tmp/upstream/src/api/app.py | cut -d' ' -f1)
+
+          echo "auth_hash=$UPSTREAM_AUTH_HASH" >> $GITHUB_OUTPUT
+          echo "req_hash=$UPSTREAM_REQ_HASH" >> $GITHUB_OUTPUT
+          echo "app_hash=$UPSTREAM_APP_HASH" >> $GITHUB_OUTPUT
+
+          # Store hashes for comparison
+          echo "$UPSTREAM_AUTH_HASH" > /tmp/current_hashes.txt
+          echo "$UPSTREAM_REQ_HASH" >> /tmp/current_hashes.txt
+          echo "$UPSTREAM_APP_HASH" >> /tmp/current_hashes.txt
+
+          # Try applying patches
+          cd /tmp/upstream/src
+          PATCH_FAILED=0
+          for patch in $GITHUB_WORKSPACE/patches/*.patch; do
+            if ! patch -p1 --dry-run < "$patch" > /dev/null 2>&1; then
+              echo "::warning::Patch $(basename $patch) may not apply cleanly to latest upstream"
+              PATCH_FAILED=1
+            fi
+          done
+
+          if [ "$PATCH_FAILED" = "1" ]; then
+            echo "drift=true" >> $GITHUB_OUTPUT
+          else
+            echo "drift=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create issue on drift
+        if: steps.drift.outputs.drift == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'upstream-drift',
+              state: 'open'
+            });
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '⚠️ Upstream drift detected: patches may need updating',
+                body: `The weekly upstream check found that one or more patches may not apply cleanly to the latest \`aws-samples/bedrock-access-gateway\` source.\n\nPlease review and update the patches in \`patches/\` directory.\n\nUpstream hashes:\n- auth.py: \`${{ steps.drift.outputs.auth_hash }}\`\n- requirements.txt: \`${{ steps.drift.outputs.req_hash }}\`\n- app.py: \`${{ steps.drift.outputs.app_hash }}\``,
+                labels: ['upstream-drift', 'automated']
+              });
+            }
