@@ -1,5 +1,5 @@
---- a/api/auth.py
-+++ b/api/auth.py
+--- a/api/auth.py	2026-03-02 12:05:50.985422872 +0800
++++ b/api/auth.py	2026-03-02 12:06:12.069174505 +0800
 @@ -1,7 +1,6 @@
  import json
  import os
@@ -8,8 +8,7 @@
  import boto3
  from botocore.exceptions import ClientError
  from fastapi import Depends, HTTPException, status
-@@ -11,28 +10,23 @@ from api.setting import DEFAULT_API_KEYS
- 
+@@ -10,28 +9,28 @@
  api_key_param = os.environ.get("API_KEY_PARAM_NAME")
  api_key_secret_arn = os.environ.get("API_KEY_SECRET_ARN")
  api_key_env = os.environ.get("API_KEY")
@@ -42,10 +41,12 @@
  elif api_key_env:
      api_key = api_key_env
 -else:
--    # For local use only.
--    api_key = DEFAULT_API_KEYS
+-    raise RuntimeError(
+-        "API Key is not configured. Please set up your API Key."
+-    )
 +
 +if not api_key:
-+    api_key = DEFAULT_API_KEYS
-+
++    raise RuntimeError("API Key is not configured. Please set up your API Key.")
+ 
  security = HTTPBearer()
+ 
