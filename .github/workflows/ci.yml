@@ -165,6 +165,9 @@ jobs:
     name: Check upstream drift
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
